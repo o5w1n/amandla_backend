@@ -4,22 +4,22 @@ const pool = require('./config/backdb');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken')
 const bodyParser = require('body-parser')
-const cors = require('cors'); 
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3004;
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true}))
+app.use(express.urlencoded({ extended: true }))
 
 app.use(cors({
-    origin: '*',  
+    origin: '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(cors()); 
+app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -27,23 +27,23 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/health", async (req, res) => {
     try {
         await pool.query('SELECT NOW()');
-        res.status(200).json({ 
-            status: 'OK', 
+        res.status(200).json({
+            status: 'OK',
             timestamp: new Date().toISOString(),
             service: 'Amandla Backend',
             database: 'Connected'
         });
     } catch (error) {
-        res.status(500).json({ 
-            status: 'ERROR', 
+        res.status(500).json({
+            status: 'ERROR',
             message: 'Database connection failed',
-            error: error.message 
+            error: error.message
         });
     }
 });
 
 app.get("/", async (req, res) => {
-    res.json({ 
+    res.json({
         message: 'Amandla Backend is running!',
         endpoints: {
             auth: ['/auth/register', '/auth/login'],
@@ -229,8 +229,18 @@ app.get('/auth/team/myTeams', async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userid = decoded.id;
 
-        const userTeams = await pool.query(`Select t.id, t.name, t.created_at, u.name as creator_name, COUNT (m2.user_id) as total_members, (SELECT COUNT(*) FROM tasks Where team_id = t.id) as task_count FROM members m JOIN teams t ON m.team_id = t.id JOIN users u ON t.created_by = u.id
-            LEFT JOIN members m2 ON t.id = m2.team_id GROUP BY t.id, u.name, m.role ORDER BY t.created_at DESC`, [userid]);
+        const userTeams = await pool.query(`
+            SELECT t.id, t.name, t.created_at, 
+                   u.name as creator_name, 
+                   COUNT(DISTINCT m2.user_id) as total_members, 
+                   (SELECT COUNT(*) FROM tasks WHERE team_id = t.id) as task_count 
+            FROM members m 
+            JOIN teams t ON m.team_id = t.id 
+            JOIN users u ON t.created_by = u.id
+            LEFT JOIN members m2 ON t.id = m2.team_id 
+            WHERE m.user_id = $1
+            GROUP BY t.id, u.name 
+            ORDER BY t.created_at DESC`, [userid]);
 
         res.json({ message: 'Teams have been retrieved successfully', teams: userTeams.rows, total: userTeams.rows.length })
     } catch (error) {
