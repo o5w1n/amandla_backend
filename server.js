@@ -452,7 +452,7 @@ app.get('/auth/team/:teamId/tasks', async (req, res) => {
         const userid = decoded.id;
 
 
-        const teammembershipp = await pool.query('SELECT * FROM members WHERE team_id = $1 AND user_id = $2', teamId, userid);
+        const teammembershipp = await pool.query('SELECT * FROM members WHERE team_id = $1 AND user_id = $2', [teamId, userid]);
         if (teammembershipp.rows.length === 0) {
             return res.status(403).json({ message: 'Access Denied. You need to be a member to create tasks bro ' });
         }
