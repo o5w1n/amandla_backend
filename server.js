@@ -4,19 +4,54 @@ const pool = require('./config/backdb');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken')
 const bodyParser = require('body-parser')
-
+const cors = require('cors'); 
 
 const app = express();
-const PORT = 3004;
+const PORT = process.env.PORT || 3004;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true}))
 
+app.use(cors({
+    origin: '*',  
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-app.get("/", async (req, res) => {
-    res.send('Amandla is running!');
+app.use(cors()); 
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.get("/health", async (req, res) => {
+    try {
+        await pool.query('SELECT NOW()');
+        res.status(200).json({ 
+            status: 'OK', 
+            timestamp: new Date().toISOString(),
+            service: 'Amandla Backend',
+            database: 'Connected'
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            status: 'ERROR', 
+            message: 'Database connection failed',
+            error: error.message 
+        });
+    }
 });
 
+app.get("/", async (req, res) => {
+    res.json({ 
+        message: 'Amandla Backend is running!',
+        endpoints: {
+            auth: ['/auth/register', '/auth/login'],
+            teams: ['/auth/teams', '/auth/team/create', '/auth/team/:id'],
+            tasks: ['/auth/team/:teamId/tasks']
+        }
+    });
+});
 
 app.post("/auth/register", async (req, res) => {
     // TODO: implement login
@@ -124,9 +159,9 @@ app.post('/auth/team/create', async (req, res) => {
         const allMails = [creator.email, ...memberemail]
         const uniqueMmails = [...new Set(allMails)];
 
-        console.log('All emails to add:', uniqueMmails);
+        console.log('All emails to add:', allMails);
 
-        const useroutcome = await pool.query('Select id, email From users where email = ANY($1)', [allMails]);
+        const useroutcome = await pool.query('Select id, email From users where email = ANY($1)', [uniqueMmails]);
 
 
         if (useroutcome.rows.length !== allMails.length) {
