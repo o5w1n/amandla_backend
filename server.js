@@ -78,7 +78,7 @@ app.post("/auth/register", async (req, res) => {
         const addnewuser = addoutcome.rows[0];
         delete addnewuser.password;
 
-        res.status(201).json({ message: 'The user has been registered sucessfully☑️', user: addnewuser });
+        res.status(201).json({ message: 'The user has been registered sucessfully', user: addnewuser });
     } catch (error) {
         console.error('There was an error during registeration:', error);
         res.status(500).json({ message: 'Server has encountered an error', });
@@ -802,6 +802,6 @@ app.get('/auth/my-tasks', async (req, res) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log("Server is running on port", PORT);
+app.listen(PORT, '0.0.0.0', () => {  // Listen on all interfaces
+    console.log(`Server running on port ${PORT}`);
 });
